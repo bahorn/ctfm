@@ -1,0 +1,211 @@
+#!/usr/bin/python3
+
+# Command Line utility to manage CTF machines.
+# Usage:
+# ctfm start <name> --ports 4444:tcp 3333:udp 5555-5560:both 2222 \
+#   --volumes `pwd`/test:/mnt/test:writable `pwd`/test2:/mnt/test2 --enableX
+#   --privileged --memory=1024mb --image ctfm:latest
+# ctfm shell <name>
+# ctfm stop <name>
+# ctfm ls
+
+import argparse
+import docker
+import os
+
+# Utility functions to convert our input into a form suitable for docker-py
+class CtfmUtils:
+    # Converts a few arguments into the volume description docker wants.
+    # ** THIS DEFAULTS TO WRITABLE ** 
+    @staticmethod
+    def volumes(path, writable=True):
+        mode = 'rw'
+        if writable == False: mode = 'ro'
+        return {'bind': path, 'mode':mode}
+    # Converts the port description into the form required by docker-py
+    @staticmethod
+    def ports(containerPort, hostPort, hostInterface='0.0.0.0', udp=False,
+              tcp=True):
+        ports = {}
+        if tcp==True:
+            ports['{}/tcp'.format(containerPort)] = (hostInterface, hostPort)
+        if udp==True:
+            ports['{}/udp'.format(containerPort)] = (hostInterface, hostPort)
+
+        return ports
+
+# Store the defaults here so they are the name for both the class and the CLI
+class CtfmDefaults:
+    memory = '512mb'
+    volumes = []
+    ports = []
+    prefix = 'ctfm'
+    enableX = False
+    privileged = False
+    image = 'ctfm:latest'
+    startCommand ='tail -f /dev/null'
+    shellCommand ='/bin/sh'
+    user = 'root'
+    display = ':0'
+    xsock = '/tmp/.X11-unix'
+
+# Main class for this script.
+class CtfmManage:
+    def __init__(self, prefix=CtfmDefaults.prefix):
+        self.client = docker.from_env()
+        # So we can find all our images
+        self.prefix = prefix
+
+    def start(self, name, ports=CtfmDefaults.ports, memory=CtfmDefaults.memory,
+              volumes=CtfmDefaults.volumes, enableX=CtfmDefaults.enableX,
+              privileged=CtfmDefaults.privileged, image=CtfmDefaults.image,
+              command=CtfmDefaults.startCommand):
+        dockerDevices = []
+        dockerEnvironment = {}
+        dockerPorts = {}
+        dockerVolumes = {}
+        # Get the volumes and ports into a usable form.
+        self._scanVolumes(volumes, dockerVolumes)
+        self._scanPorts(ports, dockerPorts)
+
+        # Setup the X server so we can run GUI programs in the container.
+        if enableX == True:
+            self._xEnable(dockerDevices, dockerEnvironment, dockerVolumes)
+        # Build our Container.
+        return self.client.containers.run(
+            image=image,
+            name=self._formatName(name),
+            ports=dockerPorts,
+            mem_limit=memory,
+            detach=True,
+            remove=True,
+            devices=dockerDevices,
+            volumes=dockerVolumes,
+            environment=dockerEnvironment,
+            command=command,
+            privileged=privileged
+        )
+
+    # Kill it.
+    def stop(self, name):
+        return self.client.containers.get(self._formatName(name)).kill()
+
+    # Get our shell
+    def shell(self, name, command=CtfmDefaults.shellCommand,
+              user=CtfmDefaults.user):
+        # I couldn't get exec_run to work correctly so I settled on this...
+        os.system('docker exec -it -u {} {} {}'.format(
+            user, self._formatName(name), command))
+
+    def ls(self):
+        containers = []
+        for container in self.client.containers.list():
+            if self.prefix+'-' in container.name[0:len(self.prefix)+1]:
+                containers.append(container)
+        return containers
+
+    def _formatName(self, name):
+        return "{}-{}".format(self.prefix, name)
+
+    # Get X Going in the container.
+    def _xEnable(self, dockerDevices, dockerEnvironment, dockerVolumes,
+                 display=CtfmDefaults.display, xsock=CtfmDefaults.xsock):
+        # Audio Device
+        dockerDevices.append("/dev/snd:/dev/snd:rwm")
+        # X auth.
+        xauth = '/tmp/.docker.xauth'
+        # HACK
+        os.system(
+            'xauth nlist :0 | sed -e "s/^..../ffff/" | xauth -f {} nmerge -'
+            .format(xauth)
+        )
+        # Set the environment.
+        dockerEnvironment['XAUTHORITY'] = xauth
+        dockerEnvironment['DISPLAY'] = display
+        # Files we need to expose.
+        dockerVolumes[xauth] = CtfmUtils.volumes(xauth, writable=True)
+        dockerVolumes[xsock] = CtfmUtils.volumes(xsock, writable=True)
+
+    def _scanVolumes(self, volumes, dockerVolumes):
+        for volume in volumes:
+            details = volume.split(':')
+            writable = False
+            if len(details) == 3:
+                if details[2] == 'writable':
+                    writable = True
+                elif details[2] == 'readonly':
+                    writable = False
+                else:
+                    raise ValueError(
+                        "Volume %s not in correct format".format(volume))
+
+            dockerVolumes[details[0]] = \
+                CtfmUtils.volumes(details[1], writable=writable)
+
+    # stupid lazy hacks.
+    def _scanPorts(self, ports, dockerPorts):
+        for port in ports:
+            details = port.split(':')
+            if len(details) == 1:
+                proto = 'tcp'
+            elif len(details) == 2:
+                proto = details[1]
+            tcp = False
+            udp = False
+            if proto in ['tcp', 'both']: tcp = True
+            if proto in ['udp', 'both']: udp = True
+            newPorts = CtfmUtils.ports(int(details[0]), int(details[0]),
+                                        tcp=tcp, udp=udp)
+            for key in newPorts.keys():
+                dockerPorts[key] = newPorts[key]
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Manages Kali Docker environments.')
+    subparser = parser.add_subparsers(dest='subparser')
+    # Start command
+    start_p = subparser.add_parser('start')
+    start_p.add_argument('name')
+    start_p.add_argument('--image', default=CtfmDefaults.image)
+    start_p.add_argument('--memory', default=CtfmDefaults.memory)
+    start_p.add_argument('--ports', nargs='+', default=CtfmDefaults.ports)
+    start_p.add_argument('--volumes', nargs='+', default=CtfmDefaults.volumes)
+    start_p.add_argument('--enableX', default=CtfmDefaults.enableX,
+                         action='store_true')
+    start_p.add_argument('--privileged', default=CtfmDefault.privileged,
+                         action='store_true')
+    start_p.add_argument('--command', nargs='*',
+                         default=CtfmDefaults.startCommand)
+    # Stop Command
+    stop_p = subparser.add_parser('stop')
+    stop_p.add_argument('name')
+    # Shell Command
+    shell_p = subparser.add_parser('shell')
+    shell_p.add_argument('name')
+    shell_p.add_argument('--user', default=CtfmDefaults.user)
+    shell_p.add_argument('--command', nargs='*',
+                         default=CtfmDefaults.shellCommand)
+    # ls command
+    shell_p = subparser.add_parser('ls')
+    args = parser.parse_args()
+    ctfm = CtfmManage()
+    # Run whatever the user told us to do.
+    if args.subparser == 'start':
+        details = ctfm.start(
+            args.name,
+            privileged=args.privileged,
+            enableX=args.enableX,
+            volumes=args.volumes,
+            ports=args.ports,
+            memory=args.memory,
+            image=args.image,
+            command=args.startCommand
+        )
+        print("{} {}".format(details.short_id, details.name))
+    elif args.subparser == 'shell':
+        ctfm.shell(args.name, command=" ".join(args.command), user=args.user)
+    elif args.subparser == 'stop':
+        print(ctfm.stop(args.name))
+    elif args.subparser == 'ls':
+        for container in ctfm.ls():
+            print(container.short_id,container.name)
