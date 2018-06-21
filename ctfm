@@ -43,8 +43,8 @@ class CtfmDefaults:
     enableX = False
     privileged = False
     image = 'ctfm:latest'
-    startCommand ='tail -f /dev/null'
-    shellCommand ='/bin/sh'
+    startCommand =['tail','-f','/dev/null']
+    shellCommand =['/bin/sh']
     user = 'root'
     display = ':0'
     xsock = '/tmp/.X11-unix'
@@ -199,7 +199,7 @@ if __name__ == "__main__":
             ports=args.ports,
             memory=args.memory,
             image=args.image,
-            command=args.startCommand
+            command=args.command
         )
         print("{} {}".format(details.short_id, details.name))
     elif args.subparser == 'shell':
