@@ -172,7 +172,7 @@ if __name__ == "__main__":
     start_p.add_argument('--volumes', nargs='+', default=CtfmDefaults.volumes)
     start_p.add_argument('--enableX', default=CtfmDefaults.enableX,
                          action='store_true')
-    start_p.add_argument('--privileged', default=CtfmDefault.privileged,
+    start_p.add_argument('--privileged', default=CtfmDefaults.privileged,
                          action='store_true')
     start_p.add_argument('--command', nargs='*',
                          default=CtfmDefaults.startCommand)
