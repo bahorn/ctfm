@@ -18,7 +18,7 @@ All the flags are optional.
 
 All the options:
 ```
-ctfm start <name> --ports 4444:tcp 3333:udp 5555-5560:both 2222 \
+ctfm start <name> --ports 4444:tcp 3333:udp 5555:both 2222 \
     --volumes `pwd`/test:/mnt/test:writable `pwd`/test2:/mnt/test2 --enableX
      --privileged --memory=1024mb --image ctfm:latest
 ```
@@ -37,3 +37,7 @@ List all containers created by this tool:
 ```
 ctfm ls
 ```
+
+### Licence
+
+GPLv3. Full text is in `LICENCE`.

@@ -7,3 +7,5 @@ openvpn
 ssh
 curl
 wget
+ftp
+tftp

@@ -2,3 +2,5 @@ dirbuster
 gobuster
 wpscan
 joomscan
+volatility
+smbmap
