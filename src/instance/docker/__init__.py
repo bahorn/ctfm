@@ -1,6 +1,7 @@
 import docker
 
 from instance import Instance
+import instanceUtils as InstanceUtils
 import utils as DockerUtils
 
 class DockerInstance(Instance):
@@ -18,13 +19,12 @@ class DockerInstance(Instance):
         self.container = self.client.containers.create(
             image=self.config.image,
             name=InstanceUtils.formatName(self.config.name),
-            ports=self.config.ports,
             mem_limit=self.config.memory,
             devices=dockerDevices,
             volumes=dockerVolumes,
             ports=dockerPorts,
             environment=dockerEnvironment,
-            privileged=self.config.privileged
+            privileged=self.config.privileged,
             detach=True
         )
 
