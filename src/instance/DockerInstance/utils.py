@@ -20,9 +20,12 @@ def environment(environment):
     return environment
 
 def ports(ports):
-    pass
+    dockerPorts = {}
+    return dockerPorts
 
 def volumes(volumes):
+    dockerVolumes = {}
     for volume in volumes:
         pass
+    return dockerVolumes
 
