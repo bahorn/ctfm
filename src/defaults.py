@@ -5,6 +5,7 @@
 memory = '512mb'
 volumes = []
 ports = []
+devices = []
 prefix = 'ctfm'
 enableX = False
 privileged = False
