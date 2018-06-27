@@ -6,7 +6,7 @@ import instanceUtils as InstanceUtils
 
 ## Generic interface all Instances must expose.
 class Instance:
-    def __init__(self, config, features=[]):
+    def __init__(self, config={}, features=[]):
         self.config = InstanceUtils.validateConfig(config, features)
         pass
     def start(self):

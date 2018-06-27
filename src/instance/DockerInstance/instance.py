@@ -12,7 +12,7 @@ class DockerInstance(Instance):
         "X":DockerFeatures.enableX
     }
     # We ignore the features passed to this class.
-    def __init__(self, config, features=None):
+    def __init__(self, config={}, features=None):
         super().__init__(config, self.features)
         self.client = docker.from_env()
         self.formatedName = InstanceUtils.formatName(self.config['name'],
@@ -43,7 +43,7 @@ class DockerInstance(Instance):
         self.container.start()
 
     def stop(self):
-        self.container.stop()
+        self.container.kill()
         self.remove()
 
     def remove(self):
