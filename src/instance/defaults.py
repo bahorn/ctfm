@@ -15,5 +15,6 @@ shellCommand = ['/bin/sh']
 features = []
 user = 'root'
 display = ':0'
-xsock = '/tmp/.X11-unix',
+xsock = '/tmp/.X11-unix'
+xauth = '/tmp/.docker.xauth'
 environment = {}

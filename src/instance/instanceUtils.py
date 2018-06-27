@@ -49,6 +49,12 @@ def validateConfig(config, features):
         config['memory'] = defaults.memory
     if 'privileged' not in config:
         config['privileged'] = defaults.privileged
+    if 'display' not in config:
+        config['display'] = defaults.display
+    if 'xsock' not in config:
+        config['xsock'] = defaults.xsock
+    if 'xauth' not in config:
+        config['xauth'] = defaults.xauth
     # Now check everything is fine.
     ## Are the features actually supported by the Instance type.
     for feature in config['features']:

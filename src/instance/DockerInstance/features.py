@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
+import os
+
 ## These all directly modify the instance after the user passed device,
 ## volumes, ports, etc. So they need to add 
 
 # Allows the container to use the hosts X server.
 def enableX(instance):
-    display = instance.config.display
-    xsock = instance.config.xsock
-    xauth = instance.config.xauth
+    display = instance.config['display']
+    xsock = instance.config['xsock']
+    xauth = instance.config['xauth']
     # Added the devices needed.
     instance.dockerDevices.append('/dev/snd:/dev/snd:rwm')
     # Authorize us

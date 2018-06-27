@@ -13,7 +13,7 @@ def devices(devices):
             features['mode'] = 'rwm'
         dockerDevices.append("{}:{}:{}".format(
             features['device'], features['mount'], features['mode']))
-        return dockerDevices
+    return dockerDevices
 
 # Nothing really needs to be done as we'd get it as a Dict anyway.
 def environment(environment):

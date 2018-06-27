@@ -1,6 +1,6 @@
 from DockerInstance import DockerInstance
 
-a = DockerInstance()
+a = DockerInstance({'features':['X']})
 a.start()
-a.command('whoami')
+a.command('bash')
 a.stop()
